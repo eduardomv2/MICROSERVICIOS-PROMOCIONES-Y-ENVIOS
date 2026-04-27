@@ -10,13 +10,13 @@ namespace Envios.Domain.Entities
     {
         // Transiciones válidas como constante estática
         private static readonly Dictionary<EstadoEnvio, EstadoEnvio[]> TransicionesValidas = new()
-    {
-        { EstadoEnvio.Preparando,   new[] { EstadoEnvio.EnCamino } },
-        { EstadoEnvio.EnCamino,     new[] { EstadoEnvio.Entregado, EstadoEnvio.Fallido } },
-        { EstadoEnvio.Fallido,      new[] { EstadoEnvio.Reprogramado } },
-        { EstadoEnvio.Reprogramado, new[] { EstadoEnvio.EnCamino } },
-        { EstadoEnvio.Entregado,    Array.Empty<EstadoEnvio>() }
-    };
+        {
+            { EstadoEnvio.Preparando,   new[] { EstadoEnvio.EnCamino } },
+            { EstadoEnvio.EnCamino,     new[] { EstadoEnvio.Entregado, EstadoEnvio.Fallido } },
+            { EstadoEnvio.Fallido,      new[] { EstadoEnvio.Reprogramado } },
+            { EstadoEnvio.Reprogramado, new[] { EstadoEnvio.EnCamino } },
+            { EstadoEnvio.Entregado,    Array.Empty<EstadoEnvio>() }
+        };
 
         // Propiedades
         public Guid Id { get; private set; }
@@ -28,10 +28,10 @@ namespace Envios.Domain.Entities
         public DateTime FechaEstimada { get; private set; }
         public DateTime? FechaEntregado { get; private set; }
 
-        private readonly List<HistorialRastreo> _historialRastreo = new();
+        private List<HistorialRastreo> _historialRastreo = new();
         public IReadOnlyList<HistorialRastreo> HistorialRastros => _historialRastreo.AsReadOnly();
 
-        private Envio() { }
+        protected Envio() { }
 
         // Fábrica
         public static ResultadoOperacion<Envio> Crear(

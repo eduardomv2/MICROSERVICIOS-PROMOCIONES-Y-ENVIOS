@@ -18,13 +18,13 @@ namespace Promociones.Domain.Entities
         public DateTime? FechaFin { get; private set; }
         public bool EsIndefinido { get; private set; }
 
-        private readonly List<ReglaCategoria> _reglasCategorias = new();
+        private List<ReglaCategoria> _reglasCategorias = new();
         public IReadOnlyList<ReglaCategoria> ReglasCategorias => _reglasCategorias.AsReadOnly();
 
-        private readonly List<PromocionMSI> _opcionesMSI = new();
+        private List<PromocionMSI> _opcionesMSI = new();
         public IReadOnlyList<PromocionMSI> OpcionesMSI => _opcionesMSI.AsReadOnly();
 
-        private Promocion() { }
+        protected Promocion() { }
 
         // Fábrica
         public static ResultadoOperacion<Promocion> Crear(

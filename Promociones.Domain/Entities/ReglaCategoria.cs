@@ -11,7 +11,7 @@ namespace Promociones.Domain.Entities
         public Guid IdCategoriaCatalogo { get; private set; }
         public decimal PorcentajeAplicable { get; private set; }
 
-        private ReglaCategoria() { }
+        protected ReglaCategoria() { }
 
         internal static ReglaCategoria Crear(
             Guid idPromocion,
