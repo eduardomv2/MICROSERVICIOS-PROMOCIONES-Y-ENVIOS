@@ -1,0 +1,10 @@
+<Solution>
+  <Project Path="Envios.API/Envios.API.csproj" />
+  <Project Path="Envios.Domain/Envios.Domain.csproj" />
+  <Project Path="Envios.Infrastructure/Envios.Infrastructure.csproj" />
+  <Project Path="Envios.Tests/Envios.Tests.csproj" />
+  <Project Path="Promociones.API/Promociones.API.csproj" />
+  <Project Path="Promociones.Domain/Promociones.Domain.csproj" />
+  <Project Path="Promociones.Infrastructure/Promociones.Infrastructure.csproj" />
+  <Project Path="Promociones.Tests/Promociones.Tests.csproj" />
+</Solution>
