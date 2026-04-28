@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+
+  envios-db:
+    image: postgres:17
+    container_name: envios-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: EnviosDB
+    ports:
+      - "5433:5432"
+    volumes:
+      - envios-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  promociones-db:
+    image: postgres:17
+    container_name: promociones-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: PromocionesDB
+    ports:
+      - "5434:5432"
+    volumes:
+      - promociones-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  envios-data:
+  promociones-data:

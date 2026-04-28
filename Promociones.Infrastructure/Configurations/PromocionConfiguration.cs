@@ -24,12 +24,11 @@ namespace Promociones.Infrastructure.Configurations
 
             builder.Property(p => p.PorcentajeDescuento)
                 .IsRequired()
-                .HasPrecision(5, 2); // ej: 100.00
+                .HasPrecision(5, 2);
 
             builder.Property(p => p.MontoMinimoCompra)
                 .IsRequired(false)
                 .HasPrecision(18, 2);
-            // NULL significa que aplica sin importar el monto total
 
             builder.Property(p => p.FechaInicio)
                 .IsRequired();
@@ -39,21 +38,17 @@ namespace Promociones.Infrastructure.Configurations
 
             builder.Property(p => p.EsIndefinido)
                 .IsRequired();
-            // Distingue promo sin fin intencional vs sin fecha asignada aún
 
-            // Relaciones con colecciones privadas
-            builder.HasMany<ReglaCategoria>("_reglasCategorias")
+            // ← FIX: usar propiedades públicas directamente
+            builder.HasMany(p => p.ReglasCategorias)
                 .WithOne()
                 .HasForeignKey(r => r.IdPromocionDescuento)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.HasMany<PromocionMSI>("_opcionesMSI")
+            builder.HasMany(p => p.OpcionesMSI)
                 .WithOne()
                 .HasForeignKey(m => m.IdPromocionDescuento)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Navigation("_reglasCategorias").AutoInclude();
-            builder.Navigation("_opcionesMSI").AutoInclude();
         }
     }
 }

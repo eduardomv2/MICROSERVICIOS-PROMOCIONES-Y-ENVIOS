@@ -12,17 +12,15 @@ namespace Envios.Infrastructure.Configurations
     {
         public void Configure(EntityTypeBuilder<Envio> builder)
         {
-            // Nombre de tabla según documentación de Modelado de Datos
             builder.ToTable("ENV_Envio");
 
             builder.HasKey(e => e.Id);
 
             builder.Property(e => e.Id)
-                .ValueGeneratedNever(); // El dominio genera el GUID, no la BD
+                .ValueGeneratedNever();
 
             builder.Property(e => e.IdOrden)
                 .IsRequired();
-            // No se crea FK física — es referencia lógica a microservicio de Órdenes
 
             builder.Property(e => e.DireccionSnapshot)
                 .IsRequired()
@@ -34,7 +32,7 @@ namespace Envios.Infrastructure.Configurations
 
             builder.Property(e => e.EstadoActual)
                 .IsRequired()
-                .HasConversion<string>() // Guardamos el enum como string legible
+                .HasConversion<string>()
                 .HasMaxLength(20);
 
             builder.Property(e => e.NombreRepartidor)
@@ -47,15 +45,11 @@ namespace Envios.Infrastructure.Configurations
             builder.Property(e => e.FechaEntregado)
                 .IsRequired(false);
 
-            // Relación con historial — cascade delete
-            // Si se elimina un envío, se eliminan sus eventos de rastreo
-            builder.HasMany<HistorialRastreo>("_historialRastreo")
+            // ← FIX: usar propiedad pública directamente
+            builder.HasMany(e => e.HistorialRastros)
                 .WithOne()
                 .HasForeignKey(h => h.IdEnvio)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            // EF Core (Entity Framework Core) accede a la lista privada por nombre
-            builder.Navigation("_historialRastreo").AutoInclude();
         }
     }
 }

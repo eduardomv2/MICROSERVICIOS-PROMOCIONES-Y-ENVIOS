@@ -1,4 +1,10 @@
 <Solution>
+  <Folder Name="/Elementos de la solución/">
+    <File Path="docker-compose.yml" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
   <Project Path="Envios.API/Envios.API.csproj" />
   <Project Path="Envios.Domain/Envios.Domain.csproj" />
   <Project Path="Envios.Infrastructure/Envios.Infrastructure.csproj" />

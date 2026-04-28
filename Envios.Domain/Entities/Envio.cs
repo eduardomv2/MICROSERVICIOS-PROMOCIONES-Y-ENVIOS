@@ -10,15 +10,14 @@ namespace Envios.Domain.Entities
     {
         // Transiciones válidas como constante estática
         private static readonly Dictionary<EstadoEnvio, EstadoEnvio[]> TransicionesValidas = new()
-        {
-            { EstadoEnvio.Preparando,   new[] { EstadoEnvio.EnCamino } },
-            { EstadoEnvio.EnCamino,     new[] { EstadoEnvio.Entregado, EstadoEnvio.Fallido } },
-            { EstadoEnvio.Fallido,      new[] { EstadoEnvio.Reprogramado } },
-            { EstadoEnvio.Reprogramado, new[] { EstadoEnvio.EnCamino } },
-            { EstadoEnvio.Entregado,    Array.Empty<EstadoEnvio>() }
-        };
+    {
+        { EstadoEnvio.Preparando,   new[] { EstadoEnvio.EnCamino } },
+        { EstadoEnvio.EnCamino,     new[] { EstadoEnvio.Entregado, EstadoEnvio.Fallido } },
+        { EstadoEnvio.Fallido,      new[] { EstadoEnvio.Reprogramado } },
+        { EstadoEnvio.Reprogramado, new[] { EstadoEnvio.EnCamino } },
+        { EstadoEnvio.Entregado,    Array.Empty<EstadoEnvio>() }
+    };
 
-        // Propiedades
         public Guid Id { get; private set; }
         public Guid IdOrden { get; private set; }
         public string DireccionSnapshot { get; private set; } = string.Empty;
@@ -28,12 +27,11 @@ namespace Envios.Domain.Entities
         public DateTime FechaEstimada { get; private set; }
         public DateTime? FechaEntregado { get; private set; }
 
-        private List<HistorialRastreo> _historialRastreo = new();
-        public IReadOnlyList<HistorialRastreo> HistorialRastros => _historialRastreo.AsReadOnly();
+        // ← FIX: List<T> con setter privado
+        public List<HistorialRastreo> HistorialRastros { get; private set; } = new();
 
         protected Envio() { }
 
-        // Fábrica
         public static ResultadoOperacion<Envio> Crear(
             Guid idOrden,
             string direccionSnapshot,
@@ -64,7 +62,6 @@ namespace Envios.Domain.Entities
             return ResultadoOperacion<Envio>.Ok(envio);
         }
 
-        // Comportamiento
         public ResultadoOperacion CambiarEstado(EstadoEnvio nuevoEstado, string nota)
         {
             if (!TransicionesValidas[EstadoActual].Contains(nuevoEstado))
@@ -91,16 +88,15 @@ namespace Envios.Domain.Entities
             EstadoActual = EstadoEnvio.Reprogramado;
             FechaEstimada = nuevaFecha;
 
-            _historialRastreo.Add(HistorialRastreo.Crear(Id, "Reprogramado", motivo, nuevaFecha));
+            HistorialRastros.Add(HistorialRastreo.Crear(Id, "Reprogramado", motivo, nuevaFecha));
             return ResultadoOperacion.Ok();
         }
 
         public void AgregarEventoRastreo(string nota, DateTime? nuevaFechaProgramada) =>
-            _historialRastreo.Add(HistorialRastreo.Crear(Id, EstadoActual.ToString(), nota, nuevaFechaProgramada));
+            HistorialRastros.Add(HistorialRastreo.Crear(Id, EstadoActual.ToString(), nota, nuevaFechaProgramada));
 
-        // Métodos privados
         private void RegistrarEvento(string nota) =>
-            _historialRastreo.Add(HistorialRastreo.Crear(Id, EstadoActual.ToString(), nota));
+            HistorialRastros.Add(HistorialRastreo.Crear(Id, EstadoActual.ToString(), nota));
 
         private static string GenerarGuia() =>
             $"ENV-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..4].ToUpper()}";

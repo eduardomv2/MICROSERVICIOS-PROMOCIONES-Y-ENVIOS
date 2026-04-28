@@ -12,7 +12,7 @@ namespace Promociones.Infrastructure
 
         public DbSet<Promocion> Promociones => Set<Promocion>();
         public DbSet<ReglaCategoria> ReglasCategoria => Set<ReglaCategoria>();
-        public DbSet<PromocionMSI> PromocionesMSI => Set<PromocionMSI>();
+        public DbSet<PromocionMSI> PromocionMSIs => Set<PromocionMSI>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
