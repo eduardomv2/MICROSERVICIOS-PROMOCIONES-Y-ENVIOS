@@ -13,7 +13,7 @@ namespace Envios.Domain.Entities
         public DateTime FechaEvento { get; private set; }
         public DateTime? NuevaFechaProgramada { get; private set; }
 
-        private HistorialRastreo() { }
+        protected HistorialRastreo() { }
 
         internal static HistorialRastreo Crear(
             Guid idEnvio,

@@ -9,7 +9,6 @@ namespace Promociones.Domain.Entities
     {
         private static readonly int[] MesesPermitidos = { 3, 6, 9, 12 };
 
-        // Propiedades
         public Guid Id { get; private set; }
         public string NombreCampana { get; private set; } = string.Empty;
         public decimal PorcentajeDescuento { get; private set; }
@@ -18,15 +17,12 @@ namespace Promociones.Domain.Entities
         public DateTime? FechaFin { get; private set; }
         public bool EsIndefinido { get; private set; }
 
-        private readonly List<ReglaCategoria> _reglasCategorias = new();
-        public IReadOnlyList<ReglaCategoria> ReglasCategorias => _reglasCategorias.AsReadOnly();
+        // ← FIX: List<T> con setter privado en lugar de campo privado + wrapper
+        public List<ReglaCategoria> ReglasCategorias { get; private set; } = new();
+        public List<PromocionMSI> OpcionesMSI { get; private set; } = new();
 
-        private readonly List<PromocionMSI> _opcionesMSI = new();
-        public IReadOnlyList<PromocionMSI> OpcionesMSI => _opcionesMSI.AsReadOnly();
+        protected Promocion() { }
 
-        private Promocion() { }
-
-        // Fábrica
         public static ResultadoOperacion<Promocion> Crear(
             string nombreCampana,
             decimal porcentajeDescuento,
@@ -59,15 +55,12 @@ namespace Promociones.Domain.Entities
             });
         }
 
-        // Comportamiento
         public bool EstaVigente()
         {
             var hoy = DateTime.Today;
-
             if (hoy < FechaInicio) return false;
             if (EsIndefinido) return true;
             if (FechaFin == null) return false;
-
             return hoy <= FechaFin.Value;
         }
 
@@ -82,7 +75,7 @@ namespace Promociones.Domain.Entities
             if (montoMinimo < 0)
                 return ResultadoOperacion.Fallo("El monto mínimo no puede ser negativo");
 
-            _opcionesMSI.Add(PromocionMSI.Crear(Id, meses, bancos, montoMinimo));
+            OpcionesMSI.Add(PromocionMSI.Crear(Id, meses, bancos, montoMinimo));
             return ResultadoOperacion.Ok();
         }
 
@@ -91,14 +84,13 @@ namespace Promociones.Domain.Entities
             if (!PorcentajeEsValido(porcentaje))
                 return ResultadoOperacion.Fallo("El porcentaje debe estar entre 1 y 100");
 
-            if (_reglasCategorias.Any(r => r.IdCategoriaCatalogo == idCategoria))
+            if (ReglasCategorias.Any(r => r.IdCategoriaCatalogo == idCategoria))
                 return ResultadoOperacion.Fallo("Ya existe una regla para esta categoría");
 
-            _reglasCategorias.Add(ReglaCategoria.Crear(Id, idCategoria, porcentaje));
+            ReglasCategorias.Add(ReglaCategoria.Crear(Id, idCategoria, porcentaje));
             return ResultadoOperacion.Ok();
         }
 
-        // Métodos privados
         private static bool PorcentajeEsValido(decimal porcentaje) =>
             porcentaje > 0 && porcentaje <= 100;
     }

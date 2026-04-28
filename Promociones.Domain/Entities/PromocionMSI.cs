@@ -12,7 +12,7 @@ namespace Promociones.Domain.Entities
         public int Meses { get; private set; }
         public decimal MontoMinimoCompra { get; private set; }
 
-        private PromocionMSI() { }
+        protected PromocionMSI() { }
 
         internal static PromocionMSI Crear(
             Guid idPromocion,
