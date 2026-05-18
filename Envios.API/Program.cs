@@ -1,9 +1,11 @@
+using Envios.Domain.Entities;
+using Envios.Domain.Enums;
 using Envios.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Base de datos
+// ── Base de datos ─────────────────────────────────────────────────
 builder.Services.AddDbContext<EnviosDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("EnviosDB"),
@@ -11,7 +13,7 @@ builder.Services.AddDbContext<EnviosDbContext>(options =>
     )
 );
 
-// Swagger
+// ── Swagger ───────────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -25,25 +27,250 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Migraciones automáticas al iniciar
+// ── Migraciones automáticas ───────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<EnviosDbContext>();
     db.Database.Migrate();
 }
 
-// Middleware
-if (app.Environment.IsDevelopment())
+// ── Middleware ────────────────────────────────────────────────────
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Envíos API v1"));
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Envíos API v1");
+    c.RoutePrefix = "swagger";
+});
 
-app.UseHttpsRedirection();
+app.UseExceptionHandler(errApp =>
+{
+    errApp.Run(async context =>
+    {
+        var error = context.Features
+            .Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            status = 500,
+            error = "Error interno del servidor.",
+            detalle = error?.Error.Message,
+            timestamp = DateTime.UtcNow
+        });
+    });
+});
 
-// Endpoints
-app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "Envios.API" }))
-   .WithTags("Health")
-   .WithSummary("Verificar estado del servicio");
+// ══════════════════════════════════════════════════════════════════
+// ENDPOINTS
+// ══════════════════════════════════════════════════════════════════
+
+// GET /health
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "healthy",
+    service = "Envios API",
+    timestamp = DateTime.UtcNow
+}))
+.WithTags("Health")
+.WithSummary("Verificar estado del servicio");
+
+// POST /api/envios
+app.MapPost("/api/envios", async (
+    CrearEnvioRequest req,
+    EnviosDbContext db) =>
+{
+    var resultado = Envio.Crear(
+        req.IdOrden,
+        req.DireccionSnapshot,
+        req.NombreRepartidor,
+        req.FechaEstimada);
+
+    if (!resultado.EsExitoso)
+        return Results.BadRequest(new { error = resultado.Error });
+
+    var envio = resultado.Valor!;
+    db.Envios.Add(envio);
+    await db.SaveChangesAsync();
+
+    return Results.Created(
+        $"/api/envios/{envio.Id}",
+        new
+        {
+            envio.Id,
+            envio.EstadoActual,
+            envio.GuiaPaqueteria,
+            envio.FechaEntregado
+        });
+})
+.WithName("CrearEnvio")
+.WithTags("Envios")
+.WithSummary("Crear un nuevo envío asociado a una orden");
+
+// GET /api/envios/{id}
+app.MapGet("/api/envios/{id:guid}", async (
+    Guid id,
+    EnviosDbContext db) =>
+{
+    var envio = await db.Envios
+        .Include(e => e.HistorialRastros)
+        .FirstOrDefaultAsync(e => e.Id == id);
+
+    return envio is null
+        ? Results.NotFound(new { error = "Envío no encontrado." })
+        : Results.Ok(new
+        {
+            envio.Id,
+            envio.IdOrden,
+            envio.DireccionSnapshot,
+            envio.GuiaPaqueteria,
+            EstadoActual = envio.EstadoActual.ToString(),
+            envio.NombreRepartidor,
+            envio.FechaEstimada,
+            envio.FechaEntregado
+        });
+})
+.WithName("ObtenerEnvio")
+.WithTags("Envios")
+.WithSummary("Obtener detalle de un envío por su ID");
+
+// GET /api/envios/orden/{idOrden}
+app.MapGet("/api/envios/orden/{idOrden:guid}", async (
+    Guid idOrden,
+    EnviosDbContext db) =>
+{
+    var envio = await db.Envios
+        .FirstOrDefaultAsync(e => e.IdOrden == idOrden);
+
+    return envio is null
+        ? Results.NotFound(new { error = "No se encontró envío para esa orden." })
+        : Results.Ok(new
+        {
+            envio.Id,
+            envio.IdOrden,
+            envio.DireccionSnapshot,
+            envio.GuiaPaqueteria,
+            EstadoActual = envio.EstadoActual.ToString(),
+            envio.FechaEstimada,
+            envio.FechaEntregado
+        });
+})
+.WithName("ObtenerEnvioPorOrden")
+.WithTags("Envios")
+.WithSummary("Obtener el envío asociado a una orden");
+
+// PATCH /api/envios/{id}/estado
+app.MapMethods("/api/envios/{id:guid}/estado", ["PATCH"], async (
+    Guid id,
+    CambiarEstadoRequest req,
+    EnviosDbContext db) =>
+{
+    var envio = await db.Envios
+        .Include(e => e.HistorialRastros)
+        .FirstOrDefaultAsync(e => e.Id == id);
+
+    if (envio is null)
+        return Results.NotFound(new { error = "Envío no encontrado." });
+
+    if (!Enum.TryParse<EstadoEnvio>(req.NuevoEstado, out var nuevoEstado))
+        return Results.BadRequest(new
+        {
+            error = "Estado no válido.",
+            valoresPermitidos = Enum.GetNames<EstadoEnvio>()
+        });
+
+    var resultado = envio.CambiarEstado(nuevoEstado, req.Nota);
+
+    if (!resultado.EsExitoso)
+        return Results.BadRequest(new
+        {
+            error = resultado.Error,
+            valoresPermitidos = Enum.GetNames<EstadoEnvio>()
+        });
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+    {
+        envio.Id,
+        EstadoActual = envio.EstadoActual.ToString(),
+        envio.FechaEntregado
+    });
+})
+.WithName("CambiarEstadoEnvio")
+.WithTags("Envios")
+.WithSummary("Cambiar el estado del envío");
+
+// PATCH /api/envios/{id}/reprogramar
+app.MapMethods("/api/envios/{id:guid}/reprogramar", ["PATCH"], async (
+    Guid id,
+    ReprogramarEnvioRequest req,
+    EnviosDbContext db) =>
+{
+    var envio = await db.Envios
+        .Include(e => e.HistorialRastros)
+        .FirstOrDefaultAsync(e => e.Id == id);
+
+    if (envio is null)
+        return Results.NotFound(new { error = "Envío no encontrado." });
+
+    var resultado = envio.Reprogramar(req.NuevaFecha, req.Nota);
+
+    if (!resultado.EsExitoso)
+        return Results.BadRequest(new { error = resultado.Error });
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new
+    {
+        envio.Id,
+        EstadoActual = envio.EstadoActual.ToString(),
+        envio.FechaEstimada
+    });
+})
+.WithName("ReprogramarEnvio")
+.WithTags("Envios")
+.WithSummary("Reprogramar una entrega fallida");
+
+// GET /api/envios/{id}/rastreo
+app.MapGet("/api/envios/{id:guid}/rastreo", async (
+    Guid id,
+    EnviosDbContext db) =>
+{
+    var envio = await db.Envios
+        .Include(e => e.HistorialRastros)
+        .FirstOrDefaultAsync(e => e.Id == id);
+
+    if (envio is null)
+        return Results.NotFound(new { error = "Envío no encontrado." });
+
+    var historial = envio.HistorialRastros
+        .OrderBy(h => h.FechaEvento)
+        .Select(h => new
+        {
+            Estado = h.Estado.ToString(),
+            h.Nota,
+            h.FechaEvento
+        });
+
+    return Results.Ok(historial);
+})
+.WithName("ObtenerRastreo")
+.WithTags("Envios")
+.WithSummary("Obtener historial completo de rastreo");
 
 app.Run();
+
+// ── Records para requests ─────────────────────────────────────────
+record CrearEnvioRequest(
+    Guid IdOrden,
+    string DireccionSnapshot,
+    string NombreRepartidor,
+    DateTime FechaEstimada);
+
+record CambiarEstadoRequest(
+    string NuevoEstado,
+    string? Nota);
+
+record ReprogramarEnvioRequest(
+    DateTime NuevaFecha,
+    string? Nota);
