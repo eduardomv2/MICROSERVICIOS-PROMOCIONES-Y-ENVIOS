@@ -55,6 +55,8 @@ app.UseExceptionHandler(errApp =>
             status = 500,
             error = "Error interno del servidor.",
             detalle = error?.Error.Message,
+            inner = error?.Error.InnerException?.Message,  
+            inner2 = error?.Error.InnerException?.InnerException?.Message,  
             timestamp = DateTime.UtcNow
         });
     });
@@ -74,16 +76,41 @@ app.MapGet("/health", () => Results.Ok(new
 .WithTags("Health")
 .WithSummary("Verificar estado del servicio");
 
-// POST /api/envios
 app.MapPost("/api/envios", async (
     CrearEnvioRequest req,
     EnviosDbContext db) =>
 {
+    var fechaUtc = DateTime.SpecifyKind(req.FechaEstimada, DateTimeKind.Utc);
+
+    // Buscar repartidor disponible
+    var repartidor = await db.Repartidores
+        .FirstOrDefaultAsync(r => r.EstaDisponible && r.Status == 1);
+
+    string nombreRepartidor;
+    string? telefonoRepartidor;
+    int? idRepartidor;
+
+    if (repartidor is not null)
+    {
+        nombreRepartidor = repartidor.Nombre;
+        telefonoRepartidor = repartidor.Telefono;
+        idRepartidor = repartidor.Id;
+        repartidor.EstaDisponible = false;
+    }
+    else
+    {
+        nombreRepartidor = "Se entregará en la paquetería más cercana";
+        telefonoRepartidor = null;
+        idRepartidor = null;
+    }
+
     var resultado = Envio.Crear(
         req.IdOrden,
         req.DireccionSnapshot,
-        req.NombreRepartidor,
-        req.FechaEstimada);
+        nombreRepartidor,
+        telefonoRepartidor,
+        idRepartidor,
+        fechaUtc);
 
     if (!resultado.EsExitoso)
         return Results.BadRequest(new { error = resultado.Error });
@@ -99,6 +126,8 @@ app.MapPost("/api/envios", async (
             envio.Id,
             envio.EstadoActual,
             envio.GuiaPaqueteria,
+            envio.NombreRepartidor,
+            envio.TelefonoRepartidor,
             envio.FechaEntregado
         });
 })
@@ -134,8 +163,8 @@ app.MapGet("/api/envios/{id:guid}", async (
 .WithSummary("Obtener detalle de un envío por su ID");
 
 // GET /api/envios/orden/{idOrden}
-app.MapGet("/api/envios/orden/{idOrden:guid}", async (
-    Guid idOrden,
+app.MapGet("/api/envios/orden/{idOrden:int}", async (
+    int idOrden,
     EnviosDbContext db) =>
 {
     var envio = await db.Envios
@@ -150,6 +179,8 @@ app.MapGet("/api/envios/orden/{idOrden:guid}", async (
             envio.DireccionSnapshot,
             envio.GuiaPaqueteria,
             EstadoActual = envio.EstadoActual.ToString(),
+            envio.NombreRepartidor,
+            envio.TelefonoRepartidor,  
             envio.FechaEstimada,
             envio.FechaEntregado
         });
@@ -167,7 +198,6 @@ app.MapMethods("/api/envios/{id:guid}/estado", ["PATCH"], async (
     var envio = await db.Envios
         .Include(e => e.HistorialRastros)
         .FirstOrDefaultAsync(e => e.Id == id);
-
     if (envio is null)
         return Results.NotFound(new { error = "Envío no encontrado." });
 
@@ -179,13 +209,21 @@ app.MapMethods("/api/envios/{id:guid}/estado", ["PATCH"], async (
         });
 
     var resultado = envio.CambiarEstado(nuevoEstado, req.Nota);
-
     if (!resultado.EsExitoso)
         return Results.BadRequest(new
         {
             error = resultado.Error,
             valoresPermitidos = Enum.GetNames<EstadoEnvio>()
         });
+
+    // Liberar repartidor cuando se entrega
+    if (nuevoEstado == EstadoEnvio.Entregado && envio.IdRepartidor.HasValue)
+    {
+        var repartidor = await db.Repartidores
+            .FirstOrDefaultAsync(r => r.Id == envio.IdRepartidor.Value);
+        if (repartidor is not null)
+            repartidor.EstaDisponible = true;
+    }
 
     await db.SaveChangesAsync();
 
@@ -262,7 +300,7 @@ app.Run();
 
 // ── Records para requests ─────────────────────────────────────────
 record CrearEnvioRequest(
-    Guid IdOrden,
+    int IdOrden,  
     string DireccionSnapshot,
     string NombreRepartidor,
     DateTime FechaEstimada);

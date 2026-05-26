@@ -45,7 +45,12 @@ namespace Envios.Infrastructure.Configurations
             builder.Property(e => e.FechaEntregado)
                 .IsRequired(false);
 
-            // ← FIX: usar propiedad pública directamente
+            builder.Property(e => e.IdRepartidor)
+                .IsRequired(false);
+            builder.Property(e => e.TelefonoRepartidor)
+                .HasMaxLength(20)
+                .IsRequired(false);
+
             builder.HasMany(e => e.HistorialRastros)
                 .WithOne()
                 .HasForeignKey(h => h.IdEnvio)

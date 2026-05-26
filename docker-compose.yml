@@ -1,6 +1,5 @@
 version: '3.8'
 services:
-
   envios-db:
     image: postgres:17
     container_name: envios-db
@@ -12,6 +11,7 @@ services:
       - "5433:5432"
     volumes:
       - envios-data:/var/lib/postgresql/data
+      - ./initdb/01_envios.sql:/docker-entrypoint-initdb.d/01_envios.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -43,6 +43,7 @@ services:
       - "5434:5432"
     volumes:
       - promociones-data:/var/lib/postgresql/data
+      - ./initdb/02_promociones.sql:/docker-entrypoint-initdb.d/02_promociones.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s

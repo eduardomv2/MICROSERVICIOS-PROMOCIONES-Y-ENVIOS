@@ -19,7 +19,7 @@ namespace Envios.Domain.Entities
     };
 
         public Guid Id { get; private set; }
-        public Guid IdOrden { get; private set; }
+        public int IdOrden { get; private set; }
         public string DireccionSnapshot { get; private set; } = string.Empty;
         public string GuiaPaqueteria { get; private set; } = string.Empty;
         public EstadoEnvio EstadoActual { get; private set; }
@@ -27,15 +27,20 @@ namespace Envios.Domain.Entities
         public DateTime FechaEstimada { get; private set; }
         public DateTime? FechaEntregado { get; private set; }
 
+        public int? IdRepartidor { get; private set; }
+        public string? TelefonoRepartidor { get; private set; }
+
         // ← FIX: List<T> con setter privado
         public List<HistorialRastreo> HistorialRastros { get; private set; } = new();
 
         protected Envio() { }
 
         public static ResultadoOperacion<Envio> Crear(
-            Guid idOrden,
+            int idOrden,
             string direccionSnapshot,
             string nombreRepartidor,
+            string? telefonoRepartidor,
+            int? idRepartidor,
             DateTime fechaEstimada)
         {
             if (string.IsNullOrWhiteSpace(direccionSnapshot))
@@ -51,8 +56,10 @@ namespace Envios.Domain.Entities
             {
                 Id = Guid.NewGuid(),
                 IdOrden = idOrden,
+                IdRepartidor = idRepartidor,
                 DireccionSnapshot = direccionSnapshot,
                 NombreRepartidor = nombreRepartidor,
+                TelefonoRepartidor = telefonoRepartidor,
                 FechaEstimada = fechaEstimada,
                 EstadoActual = EstadoEnvio.Preparando,
                 GuiaPaqueteria = GenerarGuia()

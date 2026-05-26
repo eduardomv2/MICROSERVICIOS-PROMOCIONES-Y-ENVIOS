@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Envios.Infrastructure.Migrations
 {
     [DbContext(typeof(EnviosDbContext))]
-    [Migration("20260428002943_InitialCreate")]
+    [Migration("20260525062231_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -51,13 +51,20 @@ namespace Envios.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<Guid>("IdOrden")
-                        .HasColumnType("uuid");
+                    b.Property<int>("IdOrden")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("IdRepartidor")
+                        .HasColumnType("integer");
 
                     b.Property<string>("NombreRepartidor")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
+
+                    b.Property<string>("TelefonoRepartidor")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
 
@@ -93,6 +100,35 @@ namespace Envios.Infrastructure.Migrations
                     b.HasIndex("IdEnvio");
 
                     b.ToTable("ENV_HistorialRastreo", (string)null);
+                });
+
+            modelBuilder.Entity("Envios.Domain.Entities.Repartidor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("EstaDisponible")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ENV_Repartidor", (string)null);
                 });
 
             modelBuilder.Entity("Envios.Domain.Entities.HistorialRastreo", b =>
