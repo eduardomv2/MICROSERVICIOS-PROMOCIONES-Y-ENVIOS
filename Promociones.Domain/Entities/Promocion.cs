@@ -57,7 +57,7 @@ namespace Promociones.Domain.Entities
 
         public bool EstaVigente()
         {
-            var hoy = DateTime.Today;
+            var hoy = DateTime.UtcNow;
             if (hoy < FechaInicio) return false;
             if (EsIndefinido) return true;
             if (FechaFin == null) return false;
